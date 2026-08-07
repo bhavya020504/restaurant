@@ -1,0 +1,39 @@
+# Logs & Debug Output
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Node & Build Artifacts
+node_modules
+dist
+dist-ssr
+*.local
+
+# Environment & Secrets (NEVER COMMIT REAL SECRETS)
+.env
+.env.local
+.env.*.local
+server/.env
+
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.env/
+.pytest_cache/
+
+# IDE & OS Artifacts
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
