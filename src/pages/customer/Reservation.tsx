@@ -1,31 +1,47 @@
 import React, { useState } from 'react';
-import { ApiService } from '../../services/api';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAdminStore } from '../../store/useAdminStore';
 import { useAuthStore } from '../../store/useAuthStore';
+import { ApiService } from '../../services/api';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
-import { Calendar, Clock, Users, MapPin, Sparkles, CheckCircle2, User, Phone, Mail, Clock3 } from 'lucide-react';
 import { RESTAURANT_INFO } from '../../constants/mockData';
+import { 
+  Calendar as CalendarIcon, 
+  Clock3, 
+  Users, 
+  User, 
+  Phone, 
+  Mail, 
+  CheckCircle2, 
+  Sparkles, 
+  MapPin,
+  PhoneCall,
+  Bot,
+  Home
+} from 'lucide-react';
 
 export const Reservation: React.FC = () => {
-  const addReservationLocally = useAdminStore((state) => state.addReservation);
+  const navigate = useNavigate();
   const currentUser = useAuthStore((state) => state.currentUser);
+  const addReservationLocally = useAdminStore((state) => state.addReservation);
 
   const [name, setName] = useState(currentUser?.name || '');
   const [phone, setPhone] = useState(currentUser?.phone || '');
   const [email, setEmail] = useState(currentUser?.email || '');
   const [guestsCount, setGuestsCount] = useState(2);
-  const [date, setDate] = useState('2026-08-07');
-  const [time, setTime] = useState('07:30 PM');
-  const [seatingPreference, setSeatingPreference] = useState<'Indoor' | 'Outdoor' | 'Private Room' | 'Window View'>('Outdoor');
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('07:00 PM');
+  const [seatingPreference, setSeatingPreference] = useState<'Indoor' | 'Outdoor' | 'Private Room' | 'Window View'>('Indoor');
   const [specialRequest, setSpecialRequest] = useState('');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const [confirmedReservation, setConfirmedReservation] = useState<any>(null);
   const [isOpenModal, setIsOpenModal] = useState(false);
+  const [isCallReserveModalOpen, setIsCallReserveModalOpen] = useState(false);
+  const [confirmedReservation, setConfirmedReservation] = useState<any>(null);
 
-  const timeSlots = [
+  const availableTimeSlots = [
     '05:00 PM', '05:30 PM', '06:00 PM', '06:30 PM',
     '07:00 PM', '07:30 PM', '08:00 PM', '08:30 PM',
     '09:00 PM', '09:30 PM'
@@ -66,7 +82,6 @@ export const Reservation: React.FC = () => {
         specialRequest
       });
     } catch (error) {
-      // Fallback local registration if server unreachable
       const res = addReservationLocally({
         customerName: name,
         customerPhone: phone,
@@ -122,74 +137,60 @@ export const Reservation: React.FC = () => {
                 required
                 leftIcon={<Phone className="w-4 h-4" />}
               />
-              <div className="md:col-span-2">
-                <Input
-                  label="Email Address"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  leftIcon={<Mail className="w-4 h-4" />}
-                />
-              </div>
             </div>
 
-            {/* Guests & Date */}
+            <Input
+              label="Email Address"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              leftIcon={<Mail className="w-4 h-4" />}
+            />
+
+            {/* Date & Guests */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1.5">
+              <Input
+                label="Reservation Date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                required
+                leftIcon={<CalendarIcon className="w-4 h-4" />}
+              />
+              
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">
                   Number of Guests
                 </label>
-                <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 p-2 rounded-xl border border-slate-200 dark:border-slate-700">
-                  <button
-                    type="button"
-                    onClick={() => setGuestsCount(Math.max(1, guestsCount - 1))}
-                    className="w-8 h-8 rounded-lg bg-white dark:bg-slate-700 font-black text-slate-800 dark:text-slate-200 flex items-center justify-center shadow-xs"
-                  >
-                    -
-                  </button>
-                  <span className="flex-1 text-center font-bold text-sm text-slate-900 dark:text-white flex items-center justify-center gap-1">
-                    <Users className="w-4 h-4 text-orange-500" /> {guestsCount} Guest(s)
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setGuestsCount(guestsCount + 1)}
-                    className="w-8 h-8 rounded-lg bg-white dark:bg-slate-700 font-black text-slate-800 dark:text-slate-200 flex items-center justify-center shadow-xs"
-                  >
-                    +
-                  </button>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={guestsCount}
+                    onChange={(e) => setGuestsCount(parseInt(e.target.value) || 1)}
+                    className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm font-bold text-slate-900 dark:text-slate-100"
+                  />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1.5">
-                  Reservation Date
-                </label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  required
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-slate-100"
-                />
               </div>
             </div>
 
-            {/* Time Slot Picker */}
+            {/* Time Slots */}
             <div className="space-y-2">
               <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">
-                Select Preferred Time Slot
+                Select Time Slot
               </label>
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                {timeSlots.map((slot) => (
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                {availableTimeSlots.map((slot) => (
                   <button
                     key={slot}
                     type="button"
                     onClick={() => setTime(slot)}
-                    className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                    className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all text-center ${
                       time === slot
                         ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20'
-                        : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-orange-500/40'
+                        : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-orange-500/50'
                     }`}
                   >
                     {slot}
@@ -235,14 +236,34 @@ export const Reservation: React.FC = () => {
               />
             </div>
 
-            <Button
-              type="submit"
-              size="lg"
-              isLoading={isSubmitting}
-              className="w-full font-bold shadow-lg shadow-orange-500/20 py-3.5"
-            >
-              Book Table
-            </Button>
+            {/* Action Buttons: Book Table & Call & Reserve */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <Button
+                type="submit"
+                size="lg"
+                isLoading={isSubmitting}
+                className="w-full font-bold shadow-lg shadow-orange-500/20 py-4 bg-orange-500 hover:bg-orange-600"
+              >
+                Book Table
+              </Button>
+
+              <div className="relative">
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="outline"
+                  icon={<PhoneCall className="w-5 h-5 text-indigo-500" />}
+                  onClick={() => setIsCallReserveModalOpen(true)}
+                  className="w-full font-bold py-4 border-indigo-500/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10"
+                >
+                  Call & Reserve
+                </Button>
+                <span className="absolute -top-3 right-2 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-500 text-white shadow-sm border border-white dark:border-slate-900">
+                  Coming Soon • Voice AI
+                </span>
+              </div>
+            </div>
+
           </form>
         </div>
 
@@ -268,35 +289,77 @@ export const Reservation: React.FC = () => {
 
       </div>
 
-      {/* Confirmation Modal */}
-      <Modal isOpen={isOpenModal} onClose={() => setIsOpenModal(false)} title="Request Submitted">
+      {/* 1. RESERVATION SUCCESS CONFIRMATION MODAL */}
+      <Modal isOpen={isOpenModal} onClose={() => setIsOpenModal(false)} title="Reservation Submitted">
         {confirmedReservation && (
-          <div className="space-y-6 text-center">
+          <div className="space-y-6 text-center py-2">
             <div className="w-16 h-16 rounded-full bg-emerald-500 text-white flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/30">
               <CheckCircle2 className="w-10 h-10" />
             </div>
             
             <div className="space-y-2">
               <h3 className="text-2xl font-black text-slate-900 dark:text-white font-heading">
-                Reservation Submitted Successfully
+                Reservation Submitted
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
-                Our team will review your reservation request and confirm it shortly.
+              <p className="text-xs text-slate-600 dark:text-slate-300 max-w-sm mx-auto leading-relaxed font-medium">
+                Your reservation request has been received. Our Reservation Assistant will call you shortly to confirm your reservation.
               </p>
+              <div className="pt-2">
+                <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500/10 text-amber-600 border border-amber-500/20 inline-flex items-center gap-1.5">
+                  <Clock3 className="w-3.5 h-3.5" /> Status: Pending Confirmation
+                </span>
+              </div>
             </div>
 
-            <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl text-xs space-y-2 text-left">
+            <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl text-xs space-y-2 text-left border border-slate-200/80 dark:border-slate-700">
               <p><strong>Booking Ref:</strong> {confirmedReservation.id}</p>
               <p><strong>Customer:</strong> {confirmedReservation.customerName}</p>
               <p><strong>Guests:</strong> {confirmedReservation.guestsCount} Persons</p>
               <p><strong>Requested Date & Time:</strong> {confirmedReservation.date} at {confirmedReservation.time}</p>
             </div>
 
-            <Button onClick={() => setIsOpenModal(false)} className="w-full">
-              Close
-            </Button>
+            <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+              <Button onClick={() => setIsOpenModal(false)} variant="outline" className="w-full">
+                Close
+              </Button>
+              <Link to="/profile" className="w-full">
+                <Button className="w-full font-bold">
+                  View Reservation
+                </Button>
+              </Link>
+            </div>
           </div>
         )}
+      </Modal>
+
+      {/* 2. CALL & RESERVE VOICE AGENT MODAL */}
+      <Modal isOpen={isCallReserveModalOpen} onClose={() => setIsCallReserveModalOpen(false)} title="Call & Reserve">
+        <div className="space-y-6 text-center py-4">
+          <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 flex items-center justify-center mx-auto shadow-inner">
+            <Bot className="w-8 h-8 animate-pulse" />
+          </div>
+
+          <div className="space-y-2 max-w-sm mx-auto">
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+              <Sparkles className="w-3.5 h-3.5" /> AI Reservation Assistant
+            </span>
+            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              Our AI Reservation Assistant will call you and help reserve your table.
+            </p>
+            <p className="text-xs font-semibold text-slate-400 italic">
+              This feature is coming soon.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-center gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <Button variant="outline" onClick={() => setIsCallReserveModalOpen(false)}>
+              Close
+            </Button>
+            <div className="px-4 py-2.5 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-extrabold text-xs uppercase tracking-wider border border-indigo-500/20 cursor-not-allowed">
+              Coming Soon
+            </div>
+          </div>
+        </div>
       </Modal>
 
     </div>

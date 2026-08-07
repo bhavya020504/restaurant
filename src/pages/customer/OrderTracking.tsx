@@ -8,12 +8,23 @@ import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { MapPin, AlertTriangle, Star, CheckCircle2, MessageSquare, Truck, ShoppingBag } from 'lucide-react';
+import { 
+  MapPin, 
+  AlertTriangle, 
+  Star, 
+  CheckCircle2, 
+  Truck, 
+  ShoppingBag,
+  PhoneCall,
+  Bot,
+  Sparkles
+} from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 
 export const OrderTracking: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const getOrderById = useOrderStore((state) => state.getOrderById);
+  const addOrderReviewLocally = useOrderStore((state) => state.addOrderReview);
   const addComplaintLocally = useAdminStore((state) => state.addComplaint);
 
   const order = getOrderById(orderId || '');
@@ -21,6 +32,7 @@ export const OrderTracking: React.FC = () => {
   const [isComplaintOpen, setIsComplaintOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isTrackDeliveryOpen, setIsTrackDeliveryOpen] = useState(false);
+  const [isSupportCallbackModalOpen, setIsSupportCallbackModalOpen] = useState(false);
 
   // Complaint Form State
   const [complaintCategory, setComplaintCategory] = useState<'Late Delivery' | 'Food Quality' | 'Missing Item' | 'Wrong Order' | 'Billing'>('Food Quality');
@@ -60,6 +72,7 @@ export const OrderTracking: React.FC = () => {
       category: complaintCategory,
       priority: 'Medium'
     };
+
     try {
       await ApiService.createComplaint(payload);
     } catch (err) {
@@ -71,8 +84,9 @@ export const OrderTracking: React.FC = () => {
         category: complaintCategory,
         priority: 'Medium'
       });
+    } finally {
+      setComplaintSubmitted(true);
     }
-    setComplaintSubmitted(true);
   };
 
   const handleSubmitReview = async (e: React.FormEvent) => {
@@ -80,173 +94,132 @@ export const OrderTracking: React.FC = () => {
     setIsSubmittingReview(true);
     try {
       await ApiService.addOrderReview(order.id, feedbackRating, feedbackReview);
+      addOrderReviewLocally(order.id, feedbackRating, feedbackReview);
+      setFeedbackSubmitted(true);
     } catch (err) {
-      console.warn('Backend review save deferred:', err);
+      addOrderReviewLocally(order.id, feedbackRating, feedbackReview);
+      setFeedbackSubmitted(true);
     } finally {
       setIsSubmittingReview(false);
-      setFeedbackSubmitted(true);
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       
       {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400">Order Tracking</span>
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white font-heading mt-0.5">
-            Order #{order.id}
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white font-heading">
+              Order #{order.id}
+            </h1>
+            <StatusBadge status={order.status} />
+          </div>
           <p className="text-xs text-slate-400 mt-1">Placed on {order.orderDate} at {order.orderTime}</p>
         </div>
 
-        <StatusBadge status={order.status} />
+        <div className="flex items-center gap-3 flex-wrap">
+          {order.status === 'Delivered' && (
+            <Button
+              variant="outline"
+              size="sm"
+              icon={<Star className="w-4 h-4 text-amber-500" />}
+              onClick={() => setIsFeedbackOpen(true)}
+            >
+              {order.rating ? 'Edit Review' : 'Rate & Review Order'}
+            </Button>
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<AlertTriangle className="w-4 h-4 text-red-500" />}
+            onClick={() => setIsComplaintOpen(true)}
+          >
+            Report Issue
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<PhoneCall className="w-4 h-4 text-indigo-500" />}
+            onClick={() => setIsSupportCallbackModalOpen(true)}
+            className="border-indigo-500/30 text-indigo-600 dark:text-indigo-400"
+          >
+            Request Call
+          </Button>
+        </div>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+      {/* Progress Timeline & Address */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* Timeline & Action Cards */}
-        <div className="lg:col-span-2 space-y-8">
-          
-          {/* Timeline Card */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-8 shadow-sm space-y-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white font-heading">
-              Order Timeline
-            </h3>
-
-            <Timeline currentStatus={order.status} estimatedDelivery={order.estimatedDeliveryTime} />
-          </div>
-
-          {/* 3 Action Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            
-            {/* Action Card 1: Track Delivery */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm flex flex-col justify-between space-y-4 hover:shadow-md transition-all">
-              <div className="space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-orange-500/10 text-orange-500 flex items-center justify-center border border-orange-500/20">
-                  <Truck className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-base text-slate-900 dark:text-white font-heading">
-                    Track Delivery
-                  </h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                    View live dispatch status & vehicle location timeline.
-                  </p>
-                </div>
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full font-bold"
-                onClick={() => setIsTrackDeliveryOpen(true)}
-              >
-                Track Delivery
-              </Button>
-            </div>
-
-            {/* Action Card 2: Complaint */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm flex flex-col justify-between space-y-4 hover:shadow-md transition-all">
-              <div className="space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center border border-rose-500/20">
-                  <AlertTriangle className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-base text-slate-900 dark:text-white font-heading">
-                    Complaint
-                  </h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                    Report an issue regarding food quality or late delivery.
-                  </p>
-                </div>
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full font-bold text-rose-600 border-rose-200 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                onClick={() => {
-                  setComplaintSubmitted(false);
-                  setIsComplaintOpen(true);
-                }}
-              >
-                Complaint
-              </Button>
-            </div>
-
-            {/* Action Card 3: Rate & Review Order */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm flex flex-col justify-between space-y-4 hover:shadow-md transition-all">
-              <div className="space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center border border-amber-500/20">
-                  <MessageSquare className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-base text-slate-900 dark:text-white font-heading">
-                    Rate Order
-                  </h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                    Rate your dish quality & leave a review on this order.
-                  </p>
-                </div>
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full font-bold text-amber-600 border-amber-200 hover:bg-amber-50 dark:hover:bg-amber-950/30"
-                onClick={() => {
-                  setFeedbackSubmitted(false);
-                  setIsFeedbackOpen(true);
-                }}
-              >
-                Rate & Review
-              </Button>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Order Details Sidebar */}
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm space-y-6">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white font-heading">
-            Order Summary ({order.items.length} items)
+        {/* Timeline Component */}
+        <div className="md:col-span-2 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-8 shadow-sm space-y-6">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white font-heading flex items-center justify-between">
+            <span>Delivery Status Timeline</span>
+            <span className="text-xs text-orange-500 font-bold">Est: {order.estimatedDeliveryTime}</span>
           </h3>
 
-          <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-            {order.items.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between text-xs">
-                <span className="font-medium text-slate-700 dark:text-slate-300">
-                  <span className="text-orange-500 font-bold mr-1.5">{item.quantity}x</span>
-                  {item.food.name}
-                </span>
-                <span className="font-bold text-slate-900 dark:text-slate-100">
-                  {formatCurrency(item.food.price * item.quantity)}
-                </span>
-              </div>
-            ))}
-          </div>
+          <Timeline currentStatus={order.status} estimatedDelivery={order.estimatedDeliveryTime} />
+        </div>
 
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2 text-xs text-slate-500">
-            <div className="flex items-start gap-2">
-              <MapPin className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
-              <span>{order.deliveryAddress || 'No address available'}</span>
+        {/* Delivery Destination Box */}
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm space-y-6 flex flex-col justify-between">
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">
+              Delivery Destination
+            </h3>
+            
+            <div className="flex items-start gap-3 text-xs text-slate-600 dark:text-slate-300">
+              <MapPin className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
+              <p className="leading-relaxed font-medium">{order.deliveryAddress}</p>
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-baseline justify-between">
-            <span className="text-sm font-bold text-slate-900 dark:text-white font-heading">Total Amount</span>
-            <span className="text-xl font-black text-orange-500 font-heading">{formatCurrency(order.totalAmount)}</span>
-          </div>
+          <Button
+            onClick={() => setIsTrackDeliveryOpen(true)}
+            className="w-full font-bold shadow-md shadow-orange-500/20"
+          >
+            Track Live Courier
+          </Button>
         </div>
 
+      </div>
+
+      {/* Order Summary Breakdown */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-8 shadow-sm space-y-6">
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white font-heading">
+          Purchased Items
+        </h3>
+
+        <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          {order.items.map((item: any, idx: number) => {
+            const itemName = item.food?.name || item.name || `Food Item (${item.foodId || item.food_id || idx})`;
+            const itemPrice = item.food?.price || item.price || 0;
+            return (
+              <div key={idx} className="py-3 flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-900 dark:text-slate-100">
+                  {item.quantity}x {itemName}
+                </span>
+                <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                  {formatCurrency(itemPrice * item.quantity)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-base font-black text-slate-900 dark:text-white font-heading">
+          <span>Total Amount Paid</span>
+          <span className="text-orange-500">{formatCurrency(order.totalAmount)}</span>
+        </div>
       </div>
 
       {/* TRACK DELIVERY MODAL */}
-      <Modal isOpen={isTrackDeliveryOpen} onClose={() => setIsTrackDeliveryOpen(false)} title="Live Delivery Status">
-        <div className="space-y-4 text-center py-4">
+      <Modal isOpen={isTrackDeliveryOpen} onClose={() => setIsTrackDeliveryOpen(false)} title="Live Driver Map">
+        <div className="p-4 text-center space-y-4">
           <div className="w-16 h-16 rounded-2xl bg-orange-500/10 text-orange-500 flex items-center justify-center mx-auto">
             <Truck className="w-8 h-8" />
           </div>
@@ -312,9 +285,23 @@ export const OrderTracking: React.FC = () => {
               />
             </div>
 
-            <Button type="submit" variant="danger" className="w-full py-3.5 font-bold">
-              Submit Complaint
-            </Button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <Button type="submit" variant="danger" className="w-full py-3.5 font-bold">
+                Submit Complaint
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                icon={<PhoneCall className="w-4 h-4 text-indigo-500" />}
+                onClick={() => {
+                  setIsComplaintOpen(false);
+                  setIsSupportCallbackModalOpen(true);
+                }}
+                className="w-full py-3.5 border-indigo-500/30 text-indigo-600 dark:text-indigo-400 font-bold"
+              >
+                Request a Call
+              </Button>
+            </div>
           </form>
         )}
       </Modal>
@@ -375,6 +362,36 @@ export const OrderTracking: React.FC = () => {
             </Button>
           </form>
         )}
+      </Modal>
+
+      {/* SUPPORT CALLBACK VOICE AGENT MODAL */}
+      <Modal isOpen={isSupportCallbackModalOpen} onClose={() => setIsSupportCallbackModalOpen(false)} title="Support Callback">
+        <div className="space-y-6 text-center py-4">
+          <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 flex items-center justify-center mx-auto shadow-inner">
+            <Bot className="w-8 h-8 animate-pulse" />
+          </div>
+
+          <div className="space-y-2 max-w-sm mx-auto">
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+              <Sparkles className="w-3.5 h-3.5" /> Support Voice Assistant
+            </span>
+            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              Our Support Assistant will call you shortly to understand your issue.
+            </p>
+            <p className="text-xs font-semibold text-slate-400 italic">
+              This feature will be available after Voice Agent integration.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-center gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <Button variant="outline" onClick={() => setIsSupportCallbackModalOpen(false)}>
+              Close
+            </Button>
+            <div className="px-4 py-2.5 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-extrabold text-xs uppercase tracking-wider border border-indigo-500/20 cursor-not-allowed">
+              Coming Soon
+            </div>
+          </div>
+        </div>
       </Modal>
 
     </div>

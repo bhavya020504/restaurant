@@ -18,6 +18,7 @@ interface OrderState {
     totalAmount: number;
   }) => Order;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  addOrderReview: (orderId: string, rating: number, review: string) => void;
   getOrderById: (orderId: string) => Order | undefined;
   setActiveOrder: (order: Order | null) => void;
 }
@@ -75,6 +76,20 @@ export const useOrderStore = create<OrderState>()(
           const updatedActive =
             state.activeOrder && state.activeOrder.id === orderId
               ? { ...state.activeOrder, status }
+              : state.activeOrder;
+          return { orders: updatedOrders, activeOrder: updatedActive };
+        });
+      },
+
+      addOrderReview: (orderId, rating, review) => {
+        const reviewedAt = new Date().toISOString();
+        set((state) => {
+          const updatedOrders = state.orders.map((o) =>
+            o.id === orderId ? { ...o, rating, review, reviewedAt } : o
+          );
+          const updatedActive =
+            state.activeOrder && state.activeOrder.id === orderId
+              ? { ...state.activeOrder, rating, review, reviewedAt }
               : state.activeOrder;
           return { orders: updatedOrders, activeOrder: updatedActive };
         });

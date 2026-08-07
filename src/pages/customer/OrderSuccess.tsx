@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Clock, Home, ArrowRight, ShieldAlert } from 'lucide-react';
+import { CheckCircle2, Clock, Home, ArrowRight, PhoneCall, Sparkles } from 'lucide-react';
 import { useOrderStore } from '../../store/useOrderStore';
 import { Button } from '../../components/ui/Button';
 
@@ -12,7 +12,7 @@ export const OrderSuccess: React.FC = () => {
   const order = getOrderById(orderId || '') || {
     id: orderId || 'BR-0000',
     customerName: 'Customer',
-    estimatedDeliveryTime: '30-40 mins',
+    estimatedDeliveryTime: '10 Minutes',
     deliveryAddress: 'No address available'
   };
 
@@ -30,16 +30,16 @@ export const OrderSuccess: React.FC = () => {
       </motion.div>
 
       <div className="space-y-3">
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">
-          Order Received
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+          <CheckCircle2 className="w-4 h-4" /> Order Received
         </span>
 
         <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white font-heading">
-          Order Successfully Placed
+          Your order has been received successfully.
         </h1>
 
-        <p className="text-slate-600 dark:text-slate-300 text-sm max-w-md mx-auto font-medium">
-          Our team will review your order before confirmation.
+        <p className="text-slate-600 dark:text-slate-300 text-sm max-w-md mx-auto font-medium leading-relaxed">
+          Our Order Confirmation Assistant will call you shortly to confirm your order and delivery address.
         </p>
       </div>
 
@@ -52,18 +52,31 @@ export const OrderSuccess: React.FC = () => {
             <p className="text-xl font-black text-orange-500 font-heading">{order.id}</p>
           </div>
           <div className="text-right">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Estimated Delivery Time</span>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Estimated Prep Time</span>
             <p className="text-base font-bold text-slate-900 dark:text-white font-heading flex items-center gap-1 justify-end">
-              <Clock className="w-4 h-4 text-orange-500" /> {order.estimatedDeliveryTime}
+              <Clock className="w-4 h-4 text-orange-500" /> 10 Minutes
             </p>
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-orange-500/10 border border-orange-500/20 text-xs text-orange-700 dark:text-orange-300 flex items-start gap-3">
-          <ShieldAlert className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
-          <p className="leading-relaxed">
-            <strong>Order Status Notice:</strong> Our team will review your order details before final confirmation and dispatch.
-          </p>
+        {/* Live Call Confirmation Notice */}
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-3">
+          <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
+            <PhoneCall className="w-4 h-4 animate-bounce" />
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold uppercase text-[10px] tracking-wider text-amber-700 dark:text-amber-400">
+                Status
+              </span>
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 animate-pulse">
+                • Waiting for confirmation call...
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+              Please keep your phone nearby. Our voice assistant will connect shortly to verify dispatch.
+            </p>
+          </div>
         </div>
 
       </div>
@@ -71,14 +84,14 @@ export const OrderSuccess: React.FC = () => {
       {/* Buttons */}
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
         <Link to={`/order-tracking/${order.id}`}>
-          <Button size="lg" icon={<ArrowRight className="w-5 h-5" />} className="shadow-lg shadow-orange-500/20">
+          <Button size="lg" icon={<ArrowRight className="w-5 h-5" />} className="shadow-lg shadow-orange-500/20 font-bold py-4">
             Track Order
           </Button>
         </Link>
 
         <Link to="/">
-          <Button size="lg" variant="outline" icon={<Home className="w-5 h-5" />}>
-            Go Home
+          <Button size="lg" variant="outline" icon={<Home className="w-5 h-5" />} className="font-bold py-4">
+            Back to Home
           </Button>
         </Link>
       </div>
