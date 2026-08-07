@@ -1,13 +1,14 @@
 import React from 'react';
-import { Users, Calendar, Clock, Phone, MapPin, CheckCircle, XCircle } from 'lucide-react';
+import { Users, Calendar, Clock, MapPin, CheckCircle, XCircle } from 'lucide-react';
 import { Reservation } from '../../types';
 import { useAdminStore } from '../../store/useAdminStore';
 
 export interface ReservationCardProps {
   reservation: Reservation;
+  onStatusChange?: (resId: string, status: string) => void;
 }
 
-export const ReservationCard: React.FC<ReservationCardProps> = ({ reservation }) => {
+export const ReservationCard: React.FC<ReservationCardProps> = ({ reservation, onStatusChange }) => {
   const updateReservationStatus = useAdminStore((state) => state.updateReservationStatus);
 
   const statusColors = {
@@ -16,6 +17,13 @@ export const ReservationCard: React.FC<ReservationCardProps> = ({ reservation })
     Seated: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
     Completed: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
     Cancelled: 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+  };
+
+  const handleAction = (status: string) => {
+    if (onStatusChange) {
+      onStatusChange(reservation.id, status);
+    }
+    updateReservationStatus(reservation.id, status as any);
   };
 
   return (
@@ -64,13 +72,13 @@ export const ReservationCard: React.FC<ReservationCardProps> = ({ reservation })
         {reservation.status === 'Pending' && (
           <>
             <button
-              onClick={() => updateReservationStatus(reservation.id, 'Confirmed')}
+              onClick={() => handleAction('Confirmed')}
               className="px-3 py-1.5 rounded-xl bg-emerald-500 text-white font-bold text-xs hover:bg-emerald-600 transition-colors inline-flex items-center gap-1"
             >
               <CheckCircle className="w-3.5 h-3.5" /> Confirm
             </button>
             <button
-              onClick={() => updateReservationStatus(reservation.id, 'Cancelled')}
+              onClick={() => handleAction('Cancelled')}
               className="px-3 py-1.5 rounded-xl bg-rose-500/10 text-rose-600 font-bold text-xs hover:bg-rose-500 hover:text-white transition-colors inline-flex items-center gap-1"
             >
               <XCircle className="w-3.5 h-3.5" /> Decline
@@ -80,7 +88,7 @@ export const ReservationCard: React.FC<ReservationCardProps> = ({ reservation })
 
         {reservation.status === 'Confirmed' && (
           <button
-            onClick={() => updateReservationStatus(reservation.id, 'Seated')}
+            onClick={() => handleAction('Seated')}
             className="px-3 py-1.5 rounded-xl bg-blue-500 text-white font-bold text-xs hover:bg-blue-600 transition-colors"
           >
             Mark Seated

@@ -1,14 +1,62 @@
-import React, { useState } from 'react';
-import { useAdminStore } from '../../store/useAdminStore';
+import React, { useState, useEffect } from 'react';
+import { ApiService } from '../../services/api';
 import { ReservationCard } from '../../components/admin/ReservationCard';
 import { SearchBar } from '../../components/ui/SearchBar';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { Calendar } from 'lucide-react';
+import { Reservation } from '../../types';
 
 export const Reservations: React.FC = () => {
-  const { reservations } = useAdminStore();
+  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchReservations = async () => {
+    try {
+      setIsLoading(true);
+      const data = await ApiService.getReservations();
+      if (Array.isArray(data)) {
+        const mapped: Reservation[] = data.map((r: any) => ({
+          id: r.id,
+          customerId: r.customer_id,
+          customerName: r.customer_name || 'Customer',
+          customerPhone: r.customer_phone || '—',
+          customerEmail: r.customer_email || '—',
+          guestsCount: r.guests_count || 1,
+          date: r.date || '—',
+          time: r.time || '—',
+          seatingPreference: r.seating_preference || 'Indoor',
+          status: r.status || 'Pending',
+          specialRequest: r.special_request || undefined,
+          createdAt: r.created_at || new Date().toISOString()
+        }));
+        setReservations(mapped);
+      }
+    } catch (err) {
+      console.warn('Backend reservations fetch error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReservations();
+  }, []);
+
+  const handleStatusUpdate = async (resId: string, newStatus: string) => {
+    try {
+      await ApiService.updateReservationStatus(resId, newStatus);
+      setReservations((prev) =>
+        prev.map((r) => (r.id === resId ? { ...r, status: newStatus as any } : r))
+      );
+    } catch (err) {
+      setReservations((prev) =>
+        prev.map((r) => (r.id === resId ? { ...r, status: newStatus as any } : r))
+      );
+    }
+  };
 
   const filtered = reservations.filter((r) => {
     const matchesSearch =
@@ -21,6 +69,8 @@ export const Reservations: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      
+      {/* Controls Header */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
         <div className="w-full sm:w-80">
           <SearchBar
@@ -47,19 +97,35 @@ export const Reservations: React.FC = () => {
         </div>
       </div>
 
-      {filtered.length > 0 ? (
+      {/* Grid Content */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 space-y-4">
+              <Skeleton className="h-6 w-1/3" />
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-20 w-full rounded-2xl" />
+            </div>
+          ))}
+        </div>
+      ) : filtered.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((res) => (
-            <ReservationCard key={res.id} reservation={res} />
+            <ReservationCard 
+              key={res.id} 
+              reservation={res} 
+              onStatusChange={handleStatusUpdate}
+            />
           ))}
         </div>
       ) : (
         <EmptyState
           title="No Reservations Available"
-          description="No reservations available. This data will appear after backend integration."
+          description="Table reservation records will appear here automatically when booked."
           icon={<Calendar className="w-8 h-8" />}
         />
       )}
+
     </div>
   );
 };
