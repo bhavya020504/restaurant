@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'https://restaurant-3d54.onrender.com/api/v1').replace(/\/+$/, '');
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('br_kitchen_access_token');

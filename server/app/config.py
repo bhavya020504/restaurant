@@ -19,7 +19,11 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     PORT: int = 8000
     ENABLE_SEED: bool = False  # Disabled by default; only seeds when explicitly enabled
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://restaurant-3d54.onrender.com"
+    ]
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE_PATH if os.path.exists(ENV_FILE_PATH) else None,

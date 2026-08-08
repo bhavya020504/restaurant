@@ -43,6 +43,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -58,52 +59,4 @@ def health_check():
         "service": "BR KITCHEN Backend API",
         "database_host": settings.db_host,
         "environment": settings.ENVIRONMENT
-    }
-
-@app.get("/debug-db", tags=["Health"])
-def debug_db():
-    import urllib.parse
-    from sqlalchemy import text
-    from app.config import ENV_FILE_PATH
-
-    parsed = urllib.parse.urlparse(settings.export_db_url)
-    query_params = urllib.parse.parse_qs(parsed.query)
-
-    password = parsed.password or ""
-    starts_with = password[:4] if len(password) >= 4 else password
-    ends_with = password[-4:] if len(password) >= 4 else ""
-
-    env_file_exists = os.path.exists(ENV_FILE_PATH)
-    if "DATABASE_URL" in os.environ:
-        source = "Render Environment"
-    elif env_file_exists:
-        source = "local .env file"
-    else:
-        source = "Default Fallback"
-
-    db_test = "FAILED"
-    conn_error = None
-
-    try:
-        with engine.connect() as conn:
-            conn.execute(text("SELECT current_user, current_database();"))
-            db_test = "SUCCESS"
-    except Exception as e:
-        conn_error = str(e)
-
-    return {
-        "database_host": parsed.hostname or settings.db_host,
-        "database_name": parsed.path.lstrip("/"),
-        "username": parsed.username or "unknown",
-        "driver": parsed.scheme,
-        "database_url_source": source,
-        "password_length": len(password),
-        "starts_with": starts_with,
-        "ends_with": ends_with,
-        "sslmode": query_params.get("sslmode", ["none"])[0],
-        "channel_binding": query_params.get("channel_binding", ["none"])[0],
-        "database_url_exists": bool(settings.DATABASE_URL),
-        "env_file_exists": env_file_exists,
-        "database_connection_test": db_test,
-        "connection_error": conn_error
     }
