@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useOrderStore } from '../../store/useOrderStore';
 import { useAdminStore } from '../../store/useAdminStore';
+import { ApiService } from '../../services/api';
 import { DashboardCard } from '../../components/admin/DashboardCard';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Table } from '../../components/ui/Table';
@@ -12,6 +13,34 @@ import { Link } from 'react-router-dom';
 export const Dashboard: React.FC = () => {
   const orders = useOrderStore((state) => state.orders);
   const { reservations, complaints } = useAdminStore();
+
+  useEffect(() => {
+    const fetchReservations = async () => {
+      try {
+        const data = await ApiService.getReservations();
+        if (Array.isArray(data)) {
+          const mapped = data.map((r: any) => ({
+            id: r.id,
+            customerId: r.customer_id,
+            customerName: r.customer_name || 'Customer',
+            customerPhone: r.customer_phone || '—',
+            customerEmail: r.customer_email || '—',
+            guestsCount: r.guests_count || 1,
+            date: r.date || '—',
+            time: r.time || '—',
+            seatingPreference: r.seating_preference || 'Indoor',
+            status: r.status || 'Pending',
+            specialRequest: r.special_request || undefined,
+            createdAt: r.created_at || new Date().toISOString()
+          }));
+          useAdminStore.getState().setReservations(mapped);
+        }
+      } catch (err) {
+        console.warn('Dashboard reservations fetch error:', err);
+      }
+    };
+    fetchReservations();
+  }, []);
 
   const todayRevenue = orders.reduce((sum, o) => sum + o.totalAmount, 0);
 

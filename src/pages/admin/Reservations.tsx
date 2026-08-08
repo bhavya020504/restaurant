@@ -6,8 +6,10 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { Calendar } from 'lucide-react';
 import { Reservation } from '../../types';
+import { useAdminStore } from '../../store/useAdminStore';
 
 export const Reservations: React.FC = () => {
+  const setStoreReservations = useAdminStore((state) => state.setReservations);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -33,6 +35,7 @@ export const Reservations: React.FC = () => {
           createdAt: r.created_at || new Date().toISOString()
         }));
         setReservations(mapped);
+        setStoreReservations(mapped);
       }
     } catch (err) {
       console.warn('Backend reservations fetch error:', err);
@@ -51,10 +54,12 @@ export const Reservations: React.FC = () => {
       setReservations((prev) =>
         prev.map((r) => (r.id === resId ? { ...r, status: newStatus as any } : r))
       );
+      useAdminStore.getState().updateReservationStatus(resId, newStatus as any);
     } catch (err) {
       setReservations((prev) =>
         prev.map((r) => (r.id === resId ? { ...r, status: newStatus as any } : r))
       );
+      useAdminStore.getState().updateReservationStatus(resId, newStatus as any);
     }
   };
 

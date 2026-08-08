@@ -34,6 +34,7 @@ interface AdminState {
   emailLogs: EmailLog[];
 
   // Reservation actions
+  setReservations: (reservations: Reservation[]) => void;
   addReservation: (res: Omit<Reservation, 'id' | 'createdAt' | 'status'>) => Reservation;
   updateReservationStatus: (id: string, status: ReservationStatus) => void;
 
@@ -53,6 +54,8 @@ export const useAdminStore = create<AdminState>()(
       complaints: MOCK_COMPLAINTS,
       whatsAppLogs: MOCK_WHATSAPP_LOGS,
       emailLogs: MOCK_EMAIL_LOGS,
+
+      setReservations: (reservations) => set({ reservations }),
 
       addReservation: (data) => {
         const id = `RES-${Math.floor(300 + Math.random() * 900)}`;
