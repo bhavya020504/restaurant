@@ -8,7 +8,7 @@ const getApiBaseUrl = (): string => {
 
 const API_BASE_URL = getApiBaseUrl();
 
-async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(endpoint: string, options: RequestInit = {}, retries = 2): Promise<T> {
   const token = localStorage.getItem('br_kitchen_access_token');
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -19,17 +19,29 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers
-  });
+  let lastError: any = null;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...options,
+        headers
+      });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `HTTP error ${response.status}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP error ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (err: any) {
+      lastError = err;
+      if (attempt < retries) {
+        await new Promise((res) => setTimeout(res, 1500));
+      }
+    }
   }
 
-  return response.json();
+  throw lastError || new Error('Network error: Unable to connect to backend server.');
 }
 
 export const ApiService = {
