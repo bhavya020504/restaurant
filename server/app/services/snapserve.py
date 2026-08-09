@@ -240,8 +240,16 @@ class SnapServeRESTClient:
     def outbound_call(self, phone_number: str, agent_id: str = "586", name: Optional[str] = None, email: Optional[str] = None) -> dict:
         """
         Triggers an outbound call using SnapServe REST API (POST /api/calls/outbound).
+        SnapServe expects toNumber (string) and agentId (integer).
         """
+        try:
+            agent_int_id = int(agent_id)
+        except (ValueError, TypeError):
+            agent_int_id = 586
+
         payload = {
+            "toNumber": phone_number,
+            "agentId": agent_int_id,
             "phone_number": phone_number,
             "agent_id": str(agent_id)
         }
