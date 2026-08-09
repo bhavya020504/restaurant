@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     PORT: int = 8000
     ENABLE_SEED: bool = False  # Disabled by default; only seeds when explicitly enabled
     SNAPSERVE_ORDER_CONFIRMATION_WEBHOOK_URL: str = "https://app.snapserve.ai/api/webhooks/lead/58615c59-305c-423a-bbb8-cda575d96831"
-    SNAPSERVE_RESERVATION_CONFIRMATION_WEBHOOK_URL: str = "https://app.snapserve.ai/api/webhooks/lead/ba873ead-202c-43cd-95a3-f065adcde999"
+    SNAPSERVE_RESERVATION_CONFIRMATION_WEBHOOK_URL: str = "https://app.snapserve.ai/api/webhooks/lead/0c5c0648-2b8e-4913-85dc-5b0eca30d9d4"
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://localhost:5173",
