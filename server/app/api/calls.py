@@ -1,8 +1,25 @@
-from fastapi import APIRouter
+import urllib.request
+import urllib.parse
+from fastapi import APIRouter, HTTPException, Response
+from typing import Optional
 from app.services.snapserve import SnapServeRESTClient
 from app.config import settings
 
 router = APIRouter(prefix="/calls", tags=["Calls"])
+
+AGENT_NAME_MAP = {
+    "586": "Call & Order Agent",
+    "585": "Order Confirmation Agent",
+    "588": "Call & Reservation Agent",
+    "587": "Reservation Confirmation Agent",
+}
+
+CAMPAIGN_NAME_MAP = {
+    "140": "restaurant order",
+    "142": "restaurant_reservation",
+    "122": "Website Leads",
+    "116": "Website Leads",
+}
 
 @router.get("/snapserve-health")
 @router.get("/snapserve-health/")
@@ -40,7 +57,8 @@ def get_snapserve_health():
 @router.get("/logs/")
 def get_call_logs(limit: int = 50):
     """
-    Fetches real-time call logs from SnapServe and formats them for the Admin Dashboard.
+    Fetches real-time call logs from SnapServe and enriches them with Agent Name,
+    Campaign Name, and Backend Audio Stream Proxy URLs.
     """
     if not settings.SNAPSERVE_API_KEY:
         return []
@@ -55,6 +73,7 @@ def get_call_logs(limit: int = 50):
             if not isinstance(c, dict):
                 continue
             
+            call_id = str(c.get("id"))
             created_at_str = c.get("createdAt") or ""
             date_part = created_at_str[:10] if len(created_at_str) >= 10 else "2026-08-09"
             time_part = created_at_str[11:16] if len(created_at_str) >= 16 else "12:00"
@@ -71,21 +90,33 @@ def get_call_logs(limit: int = 50):
             customer_name = meta.get("name") or meta.get("customer_name") or c.get("customerName") or "Customer"
             customer_phone = c.get("toNumber") or c.get("phoneNumber") or c.get("phone") or "—"
             raw_status = (c.get("status") or "").lower()
-            status_str = "Answered" if raw_status == "completed" else "Failed"
+            status_str = "Answered" if raw_status == "completed" else ("Failed" if raw_status == "failed" else raw_status.capitalize())
 
-            recording_url = c.get("recordingUrl")
-            if recording_url and recording_url.startswith("/"):
-                recording_url = f"https://app.snapserve.ai{recording_url}"
+            # Resolve Agent & Campaign Names
+            agent_id = str(c.get("agentId") or "")
+            agent_name = c.get("agentName") or AGENT_NAME_MAP.get(agent_id) or (f"Agent #{agent_id}" if agent_id else "SnapServe Voice AI")
+
+            campaign_id = str(c.get("campaignId") or "")
+            campaign_name = c.get("campaignName") or CAMPAIGN_NAME_MAP.get(campaign_id) or (f"Campaign #{campaign_id}" if campaign_id else "Order Confirmation")
+
+            # Stream audio via backend proxy route so browser player works without 401/CORS errors
+            has_rec = bool(c.get("recordingUrl") or c.get("recordingEnabled"))
+            recording_proxy_url = f"https://restaurant-3d54.onrender.com/api/v1/calls/{call_id}/recording" if (has_rec and raw_status == "completed") else None
 
             formatted.append({
-                "id": str(c.get("id")),
+                "id": call_id,
                 "customerName": customer_name,
                 "customerPhone": customer_phone,
+                "agentId": agent_id,
+                "agentName": agent_name,
+                "campaignId": campaign_id,
+                "campaignName": campaign_name,
                 "date": date_part,
                 "time": time_part,
                 "durationSeconds": c.get("durationSeconds") or 0,
                 "status": status_str,
-                "recordingUrl": recording_url,
+                "recordingUrl": recording_proxy_url,
+                "hasRecording": bool(recording_proxy_url),
                 "transcript": c.get("transcript"),
                 "summary": c.get("callSummary")
             })
@@ -93,6 +124,32 @@ def get_call_logs(limit: int = 50):
         return formatted
     except Exception as e:
         return []
+
+@router.get("/{call_id}/recording")
+@router.get("/recording/{call_id}")
+def get_call_recording_stream(call_id: str):
+    """
+    Safely streams call recording audio bytes from SnapServe to the frontend audio player
+    without exposing SNAPSERVE_API_KEY to the browser.
+    """
+    if not settings.SNAPSERVE_API_KEY:
+        raise HTTPException(status_code=400, detail="SNAPSERVE_API_KEY is not configured")
+
+    url = f"https://app.snapserve.ai/api/storage/recordings/{call_id}"
+    req = urllib.request.Request(
+        url,
+        headers={"Authorization": f"Bearer {settings.SNAPSERVE_API_KEY.strip()}"}
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=15.0) as res:
+            audio_bytes = res.read()
+            content_type = res.headers.get("Content-Type") or "audio/wav"
+            return Response(content=audio_bytes, media_type=content_type)
+    except urllib.error.HTTPError as e:
+        raise HTTPException(status_code=e.code, detail=f"Audio recording not available from SnapServe ({e.code})")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not stream call recording: {e}")
 
 @router.get("/{call_id}")
 def get_call_detail(call_id: str):
@@ -105,11 +162,16 @@ def get_call_detail(call_id: str):
     try:
         client = SnapServeRESTClient()
         c = client.get_call(call_id)
-        recording_url = c.get("recordingUrl")
-        if recording_url and recording_url.startswith("/"):
-            recording_url = f"https://app.snapserve.ai{recording_url}"
         
-        c["recordingUrl"] = recording_url
+        agent_id = str(c.get("agentId") or "")
+        c["agentName"] = c.get("agentName") or AGENT_NAME_MAP.get(agent_id) or f"Agent #{agent_id}"
+
+        campaign_id = str(c.get("campaignId") or "")
+        c["campaignName"] = c.get("campaignName") or CAMPAIGN_NAME_MAP.get(campaign_id) or f"Campaign #{campaign_id}"
+
+        has_rec = bool(c.get("recordingUrl") or c.get("recordingEnabled"))
+        c["recordingUrl"] = f"https://restaurant-3d54.onrender.com/api/v1/calls/{call_id}/recording" if has_rec else None
+
         return c
     except Exception as e:
         return {"error": str(e)}
