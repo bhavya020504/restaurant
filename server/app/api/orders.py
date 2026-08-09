@@ -7,6 +7,7 @@ from app.models.customer import Customer
 from app.api.auth import get_optional_current_user
 from app.schemas.order import OrderResponse, OrderCreate, OrderStatusUpdate, OrderReviewCreate
 from app.repositories.order_repository import OrderRepository
+from app.services.snapserve import trigger_order_confirmation
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
@@ -30,7 +31,15 @@ def create_order(
     current_user: Optional[Customer] = Depends(get_optional_current_user)
 ):
     repo = OrderRepository(db)
-    return repo.create(order_in, current_user=current_user)
+    created_order = repo.create(order_in, current_user=current_user)
+    
+    # Trigger SnapServe Voice AI Campaign safely after PostgreSQL commit
+    try:
+        trigger_order_confirmation(created_order, customer=current_user)
+    except Exception:
+        pass
+
+    return created_order
 
 @router.patch("/{order_id}/status", response_model=OrderResponse)
 def update_order_status(order_id: str, status_in: OrderStatusUpdate, db: Session = Depends(get_db)):
