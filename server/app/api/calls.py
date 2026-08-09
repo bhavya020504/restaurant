@@ -5,7 +5,65 @@ from typing import Optional
 from app.services.snapserve import SnapServeRESTClient
 from app.config import settings
 
+from pydantic import BaseModel, Field
+import logging
+
+logger = logging.getLogger("uvicorn")
+
 router = APIRouter(prefix="/calls", tags=["Calls"])
+
+class OutboundOrderCallRequest(BaseModel):
+    phone_number: str = Field(..., description="Customer phone number")
+    name: Optional[str] = None
+    email: Optional[str] = None
+
+@router.post("/order")
+@router.post("/order/")
+def trigger_ai_order_call(req_data: OutboundOrderCallRequest):
+    """
+    Triggers an AI Order call (Agent 586) to the customer's phone number.
+    Validates phone number and calls SnapServe REST API securely server-side.
+    Zero SnapServe credentials are sent or returned to the browser.
+    """
+    if not settings.SNAPSERVE_API_KEY.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="SnapServe API Key is not configured on server"
+        )
+
+    phone = req_data.phone_number.strip().replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+    if len(phone) < 10:
+        raise HTTPException(
+            status_code=400,
+            detail="Please enter a valid phone number with at least 10 digits."
+        )
+
+    # Normalize to E.164 format if 10-digit Indian phone provided without country code
+    if len(phone) == 10 and phone.isdigit():
+        phone = f"+91{phone}"
+    elif not phone.startswith("+"):
+        phone = f"+{phone}"
+
+    try:
+        client = SnapServeRESTClient()
+        response = client.outbound_call(
+            phone_number=phone,
+            agent_id="586",
+            name=req_data.name,
+            email=req_data.email
+        )
+        logger.info(f"Outbound AI Order Call requested for phone: '{phone}' (Agent 586)")
+        return {
+            "success": True,
+            "message": "Our AI ordering assistant will call you shortly.",
+            "call_id": response.get("id") or response.get("call_id")
+        }
+    except Exception as e:
+        logger.error(f"Failed to initiate outbound SnapServe call for {phone}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Sorry, we couldn't connect the call right now. Please try again."
+        )
 
 AGENT_NAME_MAP = {
     "586": "Call & Order Agent",

@@ -237,5 +237,20 @@ class SnapServeRESTClient:
         query_str = "?" + "&".join(params) if params else ""
         return self._request(f"calls{query_str}", method="GET")
 
+    def outbound_call(self, phone_number: str, agent_id: str = "586", name: Optional[str] = None, email: Optional[str] = None) -> dict:
+        """
+        Triggers an outbound call using SnapServe REST API (POST /api/calls/outbound).
+        """
+        payload = {
+            "phone_number": phone_number,
+            "agent_id": str(agent_id)
+        }
+        if name:
+            payload["name"] = name
+        if email:
+            payload["email"] = email
+
+        return self._request("calls/outbound", method="POST", payload=payload)
+
 
 snapserve_rest_client = SnapServeRESTClient()

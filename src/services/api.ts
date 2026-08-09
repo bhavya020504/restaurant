@@ -127,6 +127,13 @@ export const ApiService = {
     return request<any>(`/calls/${callId}`);
   },
 
+  triggerAIOrderCall: async (data: { phone_number: string; name?: string; email?: string }) => {
+    return request<any>('/calls/order/', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
   // Authentication
   register: async (userData: { name: string; email: string; phone: string; password?: string }) => {
     const data = await request<any>('/auth/register', {
