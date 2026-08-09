@@ -13,24 +13,27 @@ const getApiBaseUrl = (): string => {
 const API_BASE_URL = getApiBaseUrl();
 
 async function request<T>(endpoint: string, options: RequestInit = {}, retries = 2): Promise<T> {
-  const token = localStorage.getItem('br_kitchen_access_token');
-  const headers: Record<string, string> = {
+  const rawToken = localStorage.getItem('br_kitchen_access_token');
+  const token = (rawToken && rawToken !== 'null' && rawToken !== 'undefined' && rawToken.trim() !== '') ? rawToken.trim() : null;
+
+  const baseHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> || {})
   };
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
   let lastError: any = null;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
+      const currentHeaders = { ...baseHeaders };
+      if (token && attempt === 0) {
+        currentHeaders['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         mode: 'cors',
         credentials: 'omit',
         ...options,
-        headers
+        headers: currentHeaders
       });
 
       if (!response.ok) {
@@ -42,7 +45,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}, retries =
     } catch (err: any) {
       lastError = err;
       if (attempt < retries) {
-        await new Promise((res) => setTimeout(res, 1500));
+        await new Promise((res) => setTimeout(res, 1000));
       }
     }
   }
