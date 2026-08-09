@@ -31,6 +31,8 @@ async function request<T>(endpoint: string, options: RequestInit = {}, retries =
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        mode: 'cors',
+        credentials: 'omit',
         ...options,
         headers
       });
