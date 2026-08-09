@@ -8,6 +8,7 @@ from app.repositories.food_repository import FoodRepository
 
 router = APIRouter(prefix="/foods", tags=["Foods"])
 
+@router.get("", response_model=List[FoodResponse])
 @router.get("/", response_model=List[FoodResponse])
 def get_foods(category: Optional[str] = None, db: Session = Depends(get_db)):
     repo = FoodRepository(db)
@@ -21,6 +22,7 @@ def get_food(food_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Food item not found")
     return food
 
+@router.post("", response_model=FoodResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=FoodResponse, status_code=status.HTTP_201_CREATED)
 def create_food(food_in: FoodCreate, db: Session = Depends(get_db)):
     repo = FoodRepository(db)

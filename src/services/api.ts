@@ -28,7 +28,7 @@ export const ApiService = {
   // Foods / Menu Catalog
   getFoods: async (category?: string) => {
     const query = category ? `?category=${encodeURIComponent(category)}` : '';
-    return request<any[]>(`/foods${query}`);
+    return request<any[]>(`/foods/${query}`);
   },
 
   getFoodById: async (id: string) => {
@@ -37,17 +37,17 @@ export const ApiService = {
 
   // Customers
   getCustomers: async () => {
-    return request<any[]>('/customers');
+    return request<any[]>('/customers/');
   },
 
   // Orders
   getOrders: async (status?: string) => {
     const query = status ? `?status=${encodeURIComponent(status)}` : '';
-    return request<any[]>(`/orders${query}`);
+    return request<any[]>(`/orders/${query}`);
   },
 
   createOrder: async (orderData: any) => {
-    return request<any>('/orders', {
+    return request<any>('/orders/', {
       method: 'POST',
       body: JSON.stringify(orderData)
     });
@@ -70,11 +70,11 @@ export const ApiService = {
   // Reservations
   getReservations: async (status?: string) => {
     const query = status ? `?status=${encodeURIComponent(status)}` : '';
-    return request<any[]>(`/reservations${query}`);
+    return request<any[]>(`/reservations/${query}`);
   },
 
   createReservation: async (resData: any) => {
-    return request<any>('/reservations', {
+    return request<any>('/reservations/', {
       method: 'POST',
       body: JSON.stringify(resData)
     });
@@ -90,11 +90,11 @@ export const ApiService = {
   // Complaints
   getComplaints: async (status?: string) => {
     const query = status ? `?status=${encodeURIComponent(status)}` : '';
-    return request<any[]>(`/complaints${query}`);
+    return request<any[]>(`/complaints/${query}`);
   },
 
   createComplaint: async (complaintData: any) => {
-    return request<any>('/complaints', {
+    return request<any>('/complaints/', {
       method: 'POST',
       body: JSON.stringify(complaintData)
     });

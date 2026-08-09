@@ -8,6 +8,7 @@ from app.repositories.customer_repository import CustomerRepository
 
 router = APIRouter(prefix="/customers", tags=["Customers"])
 
+@router.get("", response_model=List[CustomerResponse])
 @router.get("/", response_model=List[CustomerResponse])
 def get_customers(db: Session = Depends(get_db)):
     repo = CustomerRepository(db)
@@ -21,6 +22,7 @@ def get_customer(customer_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Customer not found")
     return customer
 
+@router.post("", response_model=CustomerResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=CustomerResponse, status_code=status.HTTP_201_CREATED)
 def create_customer(customer_in: CustomerCreate, db: Session = Depends(get_db)):
     repo = CustomerRepository(db)

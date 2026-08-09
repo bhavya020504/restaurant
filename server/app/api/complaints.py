@@ -10,11 +10,13 @@ from app.repositories.complaint_repository import ComplaintRepository
 
 router = APIRouter(prefix="/complaints", tags=["Complaints"])
 
+@router.get("", response_model=List[ComplaintResponse])
 @router.get("/", response_model=List[ComplaintResponse])
 def get_complaints(status: Optional[str] = None, db: Session = Depends(get_db)):
     repo = ComplaintRepository(db)
     return repo.get_all(status=status)
 
+@router.post("", response_model=ComplaintResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=ComplaintResponse, status_code=status.HTTP_201_CREATED)
 def create_complaint(
     cmp_in: ComplaintCreate, 

@@ -10,6 +10,7 @@ from app.repositories.reservation_repository import ReservationRepository
 
 router = APIRouter(prefix="/reservations", tags=["Reservations"])
 
+@router.get("", response_model=List[ReservationResponse])
 @router.get("/", response_model=List[ReservationResponse])
 def get_reservations(status: Optional[str] = None, db: Session = Depends(get_db)):
     repo = ReservationRepository(db)
@@ -23,6 +24,7 @@ def get_reservation(res_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Reservation not found")
     return res
 
+@router.post("", response_model=ReservationResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=ReservationResponse, status_code=status.HTTP_201_CREATED)
 def create_reservation(
     res_in: ReservationCreate, 
