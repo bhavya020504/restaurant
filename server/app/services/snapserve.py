@@ -59,9 +59,15 @@ def trigger_order_confirmation(order: Order, customer: Optional[Customer] = None
         return False
 
     try:
+        phone = (order.customer_phone or "").strip().replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+        if len(phone) == 10 and phone.isdigit():
+            phone = f"+91{phone}"
+        elif phone and not phone.startswith("+"):
+            phone = f"+{phone}"
+
         payload = {
             "name": order.customer_name or "Valued Customer",
-            "phone": order.customer_phone or "—",
+            "phone": phone or "—",
             "email": order.customer_email or "—",
             "order_id": order.id,
             "total_amount": float(order.total_amount),
