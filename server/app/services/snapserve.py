@@ -121,16 +121,20 @@ def trigger_order_confirmation(order: Order, customer: Optional[Customer] = None
         return False
 
 
-def trigger_reservation_confirmation(reservation: Reservation, customer: Optional[Customer] = None) -> bool:
+def trigger_reservation_confirmation(reservation: Reservation, customer: Optional[Customer] = None, db: Optional[Any] = None) -> bool:
     """
     Triggers the SnapServe Voice AI Reservation Confirmation Campaign after a reservation is committed to PostgreSQL.
     
-    CRITICAL RELIABILITY & SECURITY GUARANTEES:
+    CRITICAL RELIABILITY & PERSISTENT IDEMPOTENCY GUARANTEES:
     1. Executed ONLY AFTER successful database transaction commit (PostgreSQL first).
-    2. Runs safely inside error boundaries; any network or webhook failure is caught and logged.
-    3. Webhook failure NEVER rolls back or duplicates the reservation in PostgreSQL.
+    2. Persistent Idempotency: Checks reservation.whatsapp_status / email_status in PostgreSQL; survives restarts.
+    3. Runs safely inside error boundaries; network failure NEVER rolls back or invalidates the committed reservation in PostgreSQL.
     4. Secrets, JWTs, and full sensitive URL tokens are masked in logging output.
     """
+    if getattr(reservation, "whatsapp_status", None) in ("DISPATCHED", "SUCCESS"):
+        logger.info(f"SnapServe confirmation campaign already dispatched for Reservation '{reservation.id}'; skipping duplicate dispatch.")
+        return True
+
     webhook_url = getattr(settings, "SNAPSERVE_RESERVATION_CONFIRMATION_WEBHOOK_URL", "").strip()
     if not webhook_url:
         logger.info("SnapServe reservation confirmation webhook URL is empty; skipping voice campaign trigger.")
@@ -168,10 +172,34 @@ def trigger_reservation_confirmation(reservation: Reservation, customer: Optiona
             status_code = response.status
             body = response.read().decode("utf-8", errors="ignore")
             logger.info(f"SnapServe Voice Campaign triggered successfully for Reservation '{reservation.id}' [Status: {status_code}]")
+            
+            # Persist notification dispatch status to PostgreSQL
+            reservation.whatsapp_status = "DISPATCHED"
+            reservation.email_status = "DISPATCHED" if reservation.customer_email and reservation.customer_email != "—" else "SKIPPED"
+            reservation.whatsapp_dispatched_at = datetime.utcnow()
+            reservation.email_dispatched_at = datetime.utcnow()
+            if db:
+                try:
+                    db.add(reservation)
+                    db.commit()
+                except Exception as db_err:
+                    logger.warning(f"Could not persist notification status to DB: {db_err}")
+
             return True
 
     except Exception as e:
-        logger.warning(f"SnapServe Voice Campaign trigger failed for Reservation '{reservation.id}' (Reservation remains saved in PostgreSQL): {e}")
+        safe_err = str(e)[:250]
+        logger.warning(f"SnapServe Voice Campaign trigger failed for Reservation '{reservation.id}' (Reservation remains saved in PostgreSQL): {safe_err}")
+        
+        reservation.whatsapp_status = "FAILED"
+        reservation.email_status = "FAILED"
+        if db:
+            try:
+                db.add(reservation)
+                db.commit()
+            except Exception as db_err:
+                logger.warning(f"Could not persist notification FAILED status to DB: {db_err}")
+
         return False
 
 

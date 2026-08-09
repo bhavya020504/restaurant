@@ -17,6 +17,10 @@ class Reservation(Base):
     seating_preference: Mapped[str] = mapped_column(String(50), default="Indoor")
     status: Mapped[str] = mapped_column(String(30), default="Pending", index=True)
     special_request: Mapped[str] = mapped_column(Text, nullable=True)
+    whatsapp_status: Mapped[str] = mapped_column(String(30), default="PENDING", nullable=True)
+    email_status: Mapped[str] = mapped_column(String(30), default="PENDING", nullable=True)
+    whatsapp_dispatched_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    email_dispatched_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     customer = relationship("Customer", backref="reservations", lazy="joined")

@@ -59,7 +59,9 @@ class ReservationResponse(BaseModel):
     time: str
     seating_preference: str
     status: str
-    special_request: Optional[str]
+    special_request: Optional[str] = None
+    whatsapp_status: Optional[str] = "PENDING"
+    email_status: Optional[str] = "PENDING"
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

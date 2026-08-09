@@ -141,6 +141,9 @@ def create_ai_reservation(
     created_res = repo.create(standard_res_in, current_user=None)
     logger.info(f"AI Reservation committed to PostgreSQL! Reservation ID: '{created_res.id}'")
 
+    # Trigger post-commit notification dispatcher safely
+    trigger_reservation_confirmation(created_res, db=db)
+
     return AIReservationResponse(
         success=True,
         reservation_id=created_res.id,
