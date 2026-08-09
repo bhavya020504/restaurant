@@ -1,17 +1,13 @@
 const getApiBaseUrl = (): string => {
-  let url = (import.meta.env.VITE_API_BASE_URL || '').trim();
-  if (!url || url.includes('localhost') || url.includes('127.0.0.1')) {
-    return 'https://restaurant-3d54.onrender.com/api/v1';
-  }
-  url = url.replace(/\/+$/, '');
-  if (!url.endsWith('/api/v1')) {
-    if (url.endsWith('/api')) {
-      url = `${url}/v1`;
-    } else {
-      url = `${url}/api/v1`;
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envUrl && envUrl.startsWith('https://') && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+    let url = envUrl.trim().replace(/\/+$/, '');
+    if (!url.endsWith('/api/v1')) {
+      url = url.endsWith('/api') ? `${url}/v1` : `${url}/api/v1`;
     }
+    return url;
   }
-  return url;
+  return 'https://restaurant-3d54.onrender.com/api/v1';
 };
 
 const API_BASE_URL = getApiBaseUrl();
