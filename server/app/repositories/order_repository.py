@@ -50,8 +50,27 @@ class OrderRepository:
                 customer_id = matched_cust.id
                 target_customer = matched_cust
 
-        # Update customer statistics when customer is resolved
-        if target_customer:
+        # 4. Auto-creation resolution: Create customer record if unlinked guest order
+        if not customer_id:
+            import uuid
+            cust_id = f"cust-{uuid.uuid4().hex[:8]}"
+            email_val = order_in.customer_email.lower() if (order_in.customer_email and order_in.customer_email != "—") else f"{cust_id}@guest.brkitchen.com"
+            phone_val = order_in.customer_phone if (order_in.customer_phone and order_in.customer_phone != "—") else "—"
+            
+            target_customer = Customer(
+                id=cust_id,
+                name=order_in.customer_name or "Guest Customer",
+                email=email_val,
+                phone=phone_val,
+                avatar="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+                joined_date=date_str,
+                total_orders=1,
+                total_spent=order_in.total_amount
+            )
+            self.db.add(target_customer)
+            self.db.flush()
+            customer_id = target_customer.id
+        elif target_customer:
             target_customer.total_orders += 1
             target_customer.total_spent += order_in.total_amount
 
