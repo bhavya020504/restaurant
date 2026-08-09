@@ -22,7 +22,15 @@ class OrderRepository:
         return self.db.scalars(stmt).first()
 
     def create(self, order_in: OrderCreate, current_user: Optional[Customer] = None) -> Order:
-        order_id = f"BR-{random.randint(1000, 9999)}"
+        order_id = None
+        for _ in range(10):
+            candidate_id = f"BR-{random.randint(1000, 9999)}"
+            if not self.get_by_id(candidate_id):
+                order_id = candidate_id
+                break
+        if not order_id:
+            order_id = f"BR-{random.randint(10000, 99999)}"
+
         now = datetime.now()
         date_str = now.strftime("%Y-%m-%d")
         time_str = now.strftime("%I:%M %p")

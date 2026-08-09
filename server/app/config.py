@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     SNAPSERVE_RESERVATION_CONFIRMATION_WEBHOOK_URL: str = "https://app.snapserve.ai/api/webhooks/lead/0c5c0648-2b8e-4913-85dc-5b0eca30d9d4"
     SNAPSERVE_API_KEY: str = ""
     SNAPSERVE_BASE_URL: str = "https://app.snapserve.ai/api"
+    AI_ORDER_SECRET_KEY: str = "br_kitchen_ai_order_secret_key_prod"
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://localhost:5173",

@@ -21,6 +21,29 @@ class OrderReviewCreate(BaseModel):
     rating: int = Field(..., ge=1, le=5)
     review: str
 
+class AIOrderItem(BaseModel):
+    food_id: Optional[str] = None
+    name: Optional[str] = None
+    quantity: int = Field(..., gt=0)
+    customization: Optional[str] = None
+
+class AIOrderCreate(BaseModel):
+    customer_name: str
+    customer_phone: str
+    customer_email: Optional[str] = "—"
+    delivery_address: str
+    items: List[AIOrderItem]
+    payment_method: Optional[str] = "Cash on Delivery"
+    idempotency_key: Optional[str] = None
+
+class AIOrderResponse(BaseModel):
+    success: bool = True
+    order_id: str
+    status: str
+    total_amount: float
+    estimated_delivery_time: str
+    message: str = "Order created successfully"
+
 class OrderResponse(BaseModel):
     id: str
     customer_id: Optional[str] = None
