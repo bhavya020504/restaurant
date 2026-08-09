@@ -20,8 +20,31 @@ class ReservationRepository:
         stmt = select(Reservation).where(Reservation.id == res_id)
         return self.db.scalars(stmt).first()
 
+    def check_availability(self, date: str, time: str, guests_count: int) -> bool:
+        """
+        Checks table availability in Neon PostgreSQL for a specific date, time, and guest count.
+        Max seating capacity per time slot standard is 40 guests total.
+        """
+        stmt = select(Reservation).where(
+            Reservation.date == date,
+            Reservation.time == time,
+            Reservation.status != "Cancelled"
+        )
+        existing_res = list(self.db.scalars(stmt).all())
+        total_booked_guests = sum(r.guests_count for r in existing_res)
+        
+        # Max capacity per slot: 40 guests
+        return (total_booked_guests + guests_count) <= 40
+
     def create(self, res_in: ReservationCreate, current_user: Optional[Customer] = None) -> Reservation:
-        res_id = f"RES-{random.randint(300, 999)}"
+        res_id = None
+        for _ in range(10):
+            candidate_id = f"RES-{random.randint(300, 999)}"
+            if not self.get_by_id(candidate_id):
+                res_id = candidate_id
+                break
+        if not res_id:
+            res_id = f"RES-{random.randint(1000, 9999)}"
         
         # 1. Primary resolution: Use authenticated current_user from JWT token
         customer_id = current_user.id if current_user else None
