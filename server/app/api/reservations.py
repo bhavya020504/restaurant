@@ -7,6 +7,7 @@ from app.models.customer import Customer
 from app.api.auth import get_optional_current_user
 from app.schemas.reservation import ReservationResponse, ReservationCreate, ReservationStatusUpdate
 from app.repositories.reservation_repository import ReservationRepository
+from app.services.snapserve import trigger_reservation_confirmation
 
 router = APIRouter(prefix="/reservations", tags=["Reservations"])
 
@@ -32,7 +33,12 @@ def create_reservation(
     current_user: Optional[Customer] = Depends(get_optional_current_user)
 ):
     repo = ReservationRepository(db)
-    return repo.create(res_in, current_user=current_user)
+    created_res = repo.create(res_in, current_user=current_user)
+    
+    # Trigger SnapServe Voice AI Reservation Confirmation Campaign POST-COMMIT
+    trigger_reservation_confirmation(created_res, customer=current_user)
+    
+    return created_res
 
 @router.patch("/{res_id}/status", response_model=ReservationResponse)
 def update_reservation_status(res_id: str, status_in: ReservationStatusUpdate, db: Session = Depends(get_db)):
