@@ -62,6 +62,8 @@ def trigger_order_confirmation(order: Order, customer: Optional[Customer] = None
         phone = (order.customer_phone or "").strip().replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
         if len(phone) == 10 and phone.isdigit():
             phone = f"+91{phone}"
+        elif len(phone) == 12 and phone.startswith("91") and phone.isdigit():
+            phone = f"+{phone}"
         elif phone and not phone.startswith("+"):
             phone = f"+{phone}"
 
