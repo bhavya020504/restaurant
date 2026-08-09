@@ -1,60 +1,29 @@
-const getApiBaseUrl = (): string => {
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl && envUrl.trim() !== '' && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
-    let url = envUrl.trim().replace(/\/+$/, '');
-    if (!url.endsWith('/api/v1')) {
-      url = url.endsWith('/api') ? `${url}/v1` : `${url}/api/v1`;
-    }
-    return url;
-  }
-  // Use relative '/api/v1' path in production so Vercel same-origin reverse proxy routes server-to-server with zero CORS & zero extension blocks!
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return '/api/v1';
-  }
-  return 'https://restaurant-3d54.onrender.com/api/v1';
-};
+const API_BASE_URL = 'https://restaurant-3d54.onrender.com/api/v1';
 
-const API_BASE_URL = getApiBaseUrl();
-
-async function request<T>(endpoint: string, options: RequestInit = {}, retries = 2): Promise<T> {
+async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const rawToken = localStorage.getItem('br_kitchen_access_token');
   const token = (rawToken && rawToken !== 'null' && rawToken !== 'undefined' && rawToken.trim() !== '') ? rawToken.trim() : null;
 
-  const baseHeaders: Record<string, string> = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> || {})
   };
 
-  let lastError: any = null;
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const currentHeaders = { ...baseHeaders };
-      if (token && attempt === 0) {
-        currentHeaders['Authorization'] = `Bearer ${token}`;
-      }
-
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        mode: 'cors',
-        credentials: 'omit',
-        ...options,
-        headers: currentHeaders
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `HTTP error ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (err: any) {
-      lastError = err;
-      if (attempt < retries) {
-        await new Promise((res) => setTimeout(res, 1000));
-      }
-    }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
-  throw lastError || new Error('Network error: Unable to connect to backend server.');
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || `HTTP error ${response.status}`);
+  }
+
+  return response.json();
 }
 
 export const ApiService = {

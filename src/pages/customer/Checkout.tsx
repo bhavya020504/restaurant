@@ -69,10 +69,7 @@ export const Checkout: React.FC = () => {
       navigate(`/order-success/${serverOrder.id}`);
     } catch (error: any) {
       console.error('[Checkout API Error]', error);
-      const msg = error?.message === 'Failed to fetch'
-        ? 'Unable to connect to backend server. If you have an AdBlocker, Brave Shield, or Privacy extension enabled in your browser, please pause it for this site and try again.'
-        : (error?.message || 'Failed to submit order to server. Please try again.');
-      setSubmitError(msg);
+      setSubmitError(error?.message || 'Failed to submit order to server. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
