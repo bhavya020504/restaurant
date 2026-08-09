@@ -2,7 +2,8 @@ import json
 import logging
 import urllib.request
 import urllib.parse
-from typing import Optional
+from typing import Optional, Any
+from datetime import datetime
 from app.config import settings
 from app.models.order import Order
 from app.models.reservation import Reservation
@@ -33,19 +34,23 @@ def format_items_summary(items_json) -> str:
         return ", ".join(formatted) if formatted else "1x Restaurant Meal"
     return str(items_json)
 
-def trigger_order_confirmation(order: Order, customer: Optional[Customer] = None) -> bool:
+def trigger_order_confirmation(order: Order, customer: Optional[Customer] = None, db: Optional[Any] = None) -> bool:
     """
     Triggers the SnapServe Voice AI Order Confirmation Campaign after an order is committed to PostgreSQL.
     
-    CRITICAL RELIABILITY & SECURITY GUARANTEES:
+    CRITICAL RELIABILITY & PERSISTENT IDEMPOTENCY GUARANTEES:
     1. Executed ONLY AFTER successful database transaction commit (PostgreSQL first).
-    2. Runs safely inside error boundaries; any network or webhook failure is caught and logged.
-    3. Webhook failure NEVER rolls back or duplicates the order in PostgreSQL.
-    4. Idempotency cache prevents duplicate calls if an order creation request is retried.
+    2. Persistent Idempotency: Checks order.snapserve_status in PostgreSQL; survives app restarts & worker reboots.
+    3. Runs safely inside error boundaries; any network or webhook failure is caught and recorded in DB.
+    4. Webhook failure NEVER rolls back or invalidates the committed order in PostgreSQL.
     5. Secrets, JWTs, and full sensitive URL tokens are masked in logging output.
     """
+    if getattr(order, "snapserve_status", None) in ("DISPATCHED", "SUCCESS"):
+        logger.info(f"SnapServe confirmation call already dispatched for Order '{order.id}'; skipping duplicate dispatch.")
+        return True
+
     if order.id in _triggered_order_ids:
-        logger.info(f"SnapServe confirmation call already triggered for Order '{order.id}'; skipping duplicate call.")
+        logger.info(f"SnapServe confirmation call already dispatched in memory for Order '{order.id}'; skipping duplicate dispatch.")
         return True
 
     webhook_url = getattr(settings, "SNAPSERVE_ORDER_CONFIRMATION_WEBHOOK_URL", "").strip()
@@ -85,10 +90,34 @@ def trigger_order_confirmation(order: Order, customer: Optional[Customer] = None
             body = response.read().decode("utf-8", errors="ignore")
             logger.info(f"SnapServe Voice Campaign triggered successfully for Order '{order.id}' [Status: {status_code}]")
             _triggered_order_ids.add(order.id)
+            
+            # Persist successful dispatch state to PostgreSQL
+            order.snapserve_status = "DISPATCHED"
+            order.snapserve_dispatched_at = datetime.utcnow()
+            order.snapserve_error = None
+            if db:
+                try:
+                    db.add(order)
+                    db.commit()
+                except Exception as db_err:
+                    logger.warning(f"Could not persist snapserve_status=DISPATCHED to DB: {db_err}")
+
             return True
 
     except Exception as e:
-        logger.warning(f"SnapServe Voice Campaign trigger failed for Order '{order.id}' (Order remains saved in PostgreSQL): {e}")
+        safe_err = str(e)[:250]
+        logger.warning(f"SnapServe Voice Campaign trigger failed for Order '{order.id}' (Order remains saved in PostgreSQL): {safe_err}")
+        
+        # Persist failed dispatch state to PostgreSQL for observable retry
+        order.snapserve_status = "FAILED"
+        order.snapserve_error = safe_err
+        if db:
+            try:
+                db.add(order)
+                db.commit()
+            except Exception as db_err:
+                logger.warning(f"Could not persist snapserve_status=FAILED to DB: {db_err}")
+
         return False
 
 

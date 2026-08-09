@@ -46,7 +46,7 @@ def create_order(
     
     # Trigger SnapServe Voice AI Campaign safely after PostgreSQL commit
     try:
-        trigger_order_confirmation(created_order, customer=current_user)
+        trigger_order_confirmation(created_order, customer=current_user, db=db)
     except Exception as e:
         logger.warning(f"SnapServe Voice AI campaign trigger error: {e}")
 

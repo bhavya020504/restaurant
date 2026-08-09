@@ -28,6 +28,11 @@ class Order(Base):
     review: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
+    # SnapServe Voice Campaign Tracking & Persistent Idempotency
+    snapserve_status: Mapped[Optional[str]] = mapped_column(String(30), nullable=True, default="PENDING")
+    snapserve_dispatched_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    snapserve_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     customer = relationship("Customer", backref="orders", lazy="joined")

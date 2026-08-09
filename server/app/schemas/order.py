@@ -40,6 +40,9 @@ class OrderResponse(BaseModel):
     rating: Optional[int] = None
     review: Optional[str] = None
     reviewed_at: Optional[datetime] = None
+    snapserve_status: Optional[str] = None
+    snapserve_dispatched_at: Optional[datetime] = None
+    snapserve_error: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
