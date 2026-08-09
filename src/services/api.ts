@@ -118,6 +118,15 @@ export const ApiService = {
     return request<any>('/admin/analytics');
   },
 
+  // Call Telemetry & History
+  getCallLogs: async () => {
+    return request<any[]>('/calls/logs/');
+  },
+
+  getCallById: async (callId: string) => {
+    return request<any>(`/calls/${callId}`);
+  },
+
   // Authentication
   register: async (userData: { name: string; email: string; phone: string; password?: string }) => {
     const data = await request<any>('/auth/register', {
