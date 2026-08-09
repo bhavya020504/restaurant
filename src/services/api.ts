@@ -1,4 +1,14 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'https://restaurant-3d54.onrender.com/api/v1').replace(/\/+$/, '');
+const getApiBaseUrl = (): string => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    if (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
+      return 'https://restaurant-3d54.onrender.com/api/v1';
+    }
+  }
+  return (envUrl || 'https://restaurant-3d54.onrender.com/api/v1').replace(/\/+$/, '');
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('br_kitchen_access_token');

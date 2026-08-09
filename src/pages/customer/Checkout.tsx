@@ -66,6 +66,7 @@ export const Checkout: React.FC = () => {
       });
       navigate(`/order-success/${serverOrder.id}`);
     } catch (error) {
+      console.error('[Checkout API Error]', error);
       // Fallback local creation if server offline
       const newOrder = createOrderLocally({
         customerName: name || 'Customer',
