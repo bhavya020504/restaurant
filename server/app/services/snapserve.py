@@ -113,3 +113,69 @@ def trigger_reservation_confirmation(reservation: Reservation, customer: Optiona
     except Exception as e:
         logger.warning(f"SnapServe Voice Campaign trigger failed for Reservation '{reservation.id}' (Reservation remains saved in PostgreSQL): {e}")
         return False
+
+
+class SnapServeRESTClient:
+    """
+    Server-side REST client for SnapServe platform operations.
+    Authentication is handled strictly via server environment settings (SNAPSERVE_API_KEY).
+    Secrets are NEVER returned in raw log outputs or API responses.
+    """
+    def __init__(self):
+        self.base_url = (getattr(settings, "SNAPSERVE_BASE_URL", "") or "https://app.snapserve.ai/api").rstrip("/")
+        self.api_key = getattr(settings, "SNAPSERVE_API_KEY", "").strip()
+
+    def _request(self, endpoint: str, method: str = "GET", payload: Optional[dict] = None) -> dict:
+        if not self.api_key:
+            raise ValueError("SNAPSERVE_API_KEY environment variable is not configured.")
+
+        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "BR-Kitchen-Backend/1.0",
+            "Authorization": f"Bearer {self.api_key}"
+        }
+
+        data = json.dumps(payload).encode("utf-8") if payload else None
+        req = urllib.request.Request(url, data=data, headers=headers, method=method)
+
+        try:
+            with urllib.request.urlopen(req, timeout=10.0) as response:
+                body = response.read().decode("utf-8", errors="ignore")
+                return json.loads(body) if body else {}
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode("utf-8", errors="ignore")
+            logger.warning(f"SnapServe REST API error [{e.code}] on {method} {endpoint}: {error_body}")
+            raise RuntimeError(f"SnapServe API returned status {e.code}")
+        except Exception as e:
+            logger.error(f"SnapServe REST API connection failed on {method} {endpoint}: {e}")
+            raise RuntimeError(f"SnapServe connection error: {e}")
+
+    def list_agents(self) -> dict:
+        return self._request("agents", method="GET")
+
+    def list_campaigns(self) -> dict:
+        return self._request("campaigns", method="GET")
+
+    def get_agent(self, agent_id: str) -> dict:
+        return self._request(f"agents/{agent_id}", method="GET")
+
+    def get_campaign(self, campaign_id: str) -> dict:
+        return self._request(f"campaigns/{campaign_id}", method="GET")
+
+    def get_call(self, call_id: str) -> dict:
+        return self._request(f"calls/{call_id}", method="GET")
+
+    def get_call_logs(self, agent_id: Optional[str] = None, status: Optional[str] = None, limit: int = 20) -> dict:
+        params = []
+        if agent_id:
+            params.append(f"agent_id={urllib.parse.quote(str(agent_id))}")
+        if status:
+            params.append(f"status={urllib.parse.quote(str(status))}")
+        if limit:
+            params.append(f"limit={limit}")
+        query_str = "?" + "&".join(params) if params else ""
+        return self._request(f"calls{query_str}", method="GET")
+
+
+snapserve_rest_client = SnapServeRESTClient()
