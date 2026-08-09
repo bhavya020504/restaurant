@@ -21,6 +21,7 @@ export const Checkout: React.FC = () => {
   const [city, setCity] = useState('');
   const [zip, setZip] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const subtotal = getSubtotal();
   const deliveryFee = getDeliveryFee();
@@ -31,6 +32,7 @@ export const Checkout: React.FC = () => {
     if (items.length === 0) return;
 
     setIsSubmitting(true);
+    setSubmitError(null);
     const deliveryAddress = street ? `${street}, ${city} ${zip}`.trim() : 'No address available';
 
     const payload = {
@@ -65,23 +67,9 @@ export const Checkout: React.FC = () => {
         totalAmount
       });
       navigate(`/order-success/${serverOrder.id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Checkout API Error]', error);
-      // Fallback local creation if server offline
-      const newOrder = createOrderLocally({
-        customerName: name || 'Customer',
-        customerPhone: phone || '—',
-        customerEmail: currentUser?.email || '—',
-        deliveryAddress,
-        paymentMethod: 'Credit Card',
-        items,
-        subtotal,
-        tax: getTax(),
-        deliveryFee,
-        totalAmount
-      });
-      clearCart();
-      navigate(`/order-success/${newOrder.id}`);
+      setSubmitError(error?.message || 'Failed to submit order to server. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -117,6 +105,12 @@ export const Checkout: React.FC = () => {
           <ChevronLeft className="w-4 h-4" /> Back to Cart
         </Link>
       </div>
+
+      {submitError && (
+        <div className="bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 p-4 rounded-2xl text-xs font-bold">
+          ⚠️ {submitError}
+        </div>
+      )}
 
       <form onSubmit={handlePlaceOrder} className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         
